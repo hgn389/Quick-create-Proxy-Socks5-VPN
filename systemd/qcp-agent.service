@@ -1,0 +1,23 @@
+[Unit]
+Description=QCP privileged management agent
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=60s
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=root
+Group=root
+ExecStart=/usr/local/bin/qcp agent
+Restart=on-failure
+RestartSec=3s
+RuntimeDirectory=qcp
+RuntimeDirectoryMode=0750
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectHome=yes
+
+[Install]
+WantedBy=multi-user.target

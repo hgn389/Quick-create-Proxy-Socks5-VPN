@@ -1,0 +1,31 @@
+[Unit]
+Description=QCP proxy %i
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/etc/qcp/proxies/%i.cfg
+StartLimitIntervalSec=60s
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=qcp-proxy
+Group=qcp-proxy
+ExecStart=/usr/local/libexec/qcp/3proxy /etc/qcp/proxies/%i.cfg
+Restart=on-failure
+RestartSec=3s
+UMask=0077
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+LockPersonality=yes
+CapabilityBoundingSet=
+AmbientCapabilities=
+LimitNOFILE=4096
+
+[Install]
+WantedBy=multi-user.target

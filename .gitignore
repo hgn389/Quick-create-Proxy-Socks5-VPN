@@ -1,0 +1,28 @@
+# Local secrets and generated runtime data
+.env
+.env.*
+*.key
+*.pem
+*.conf
+*.db
+*.db-*
+*.log
+backups/
+data/
+secrets/
+
+# Demo screenshots may contain example IP addresses or WireGuard QR material.
+webpanel-mockups/
+
+# Build outputs
+bin/
+build/
+dist/
+/qcp
+coverage/
+
+# Editor and OS files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

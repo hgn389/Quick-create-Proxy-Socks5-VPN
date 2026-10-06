@@ -1,0 +1,14 @@
+[Unit]
+Description=QCP panel firewall rule
+After=network-pre.target firewalld.service ufw.service
+Before=qcp-panel.service
+PartOf=qcp-panel.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/bin/qcp firewall up
+ExecStop=/usr/local/bin/qcp firewall down
+
+[Install]
+WantedBy=multi-user.target
