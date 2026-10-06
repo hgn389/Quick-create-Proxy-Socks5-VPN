@@ -3,7 +3,7 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 readonly APP_NAME="Quick Create Proxy SOCKS5 VPN"
-readonly APP_VERSION="1.0.0-beta.1"
+readonly APP_VERSION="1.0.0-beta.2"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 readonly SCRIPT_DIR
 
@@ -201,6 +201,18 @@ check_panel_port() {
   ok "Panel TCP port 22689 is available"
 }
 
+wait_for_panel() {
+  local attempt
+  for ((attempt = 1; attempt <= 25; attempt++)); do
+    if curl --fail --silent --max-time 1 \
+      --cacert /etc/qcp/panel.crt https://127.0.0.1:22689/login >/dev/null; then
+      return 0
+    fi
+    sleep 0.2
+  done
+  return 1
+}
+
 detect_panel_ip() {
   PANEL_IP="${QCP_PANEL_IP:-}"
   if [[ -z "$PANEL_IP" ]]; then
@@ -372,7 +384,7 @@ install_qcp() {
   systemctl is-active --quiet qcp-agent.service
   systemctl is-active --quiet qcp-panel.service
   systemctl is-active --quiet qcp-firewall.service
-  curl --fail --silent --show-error --max-time 5 --cacert /etc/qcp/panel.crt https://127.0.0.1:22689/login >/dev/null
+  wait_for_panel
   trap - ERR
   ok "QCP installed. Login: https://$PANEL_IP:22689"
   if [[ "$CREATED_ADMIN" == true ]]; then

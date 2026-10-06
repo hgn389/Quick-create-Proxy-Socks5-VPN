@@ -22,6 +22,15 @@ func TestPanelCertificate(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if leaf.Subject.CommonName != "203.0.113.42" {
+		t.Fatalf("unexpected certificate subject: %q", leaf.Subject.CommonName)
+	}
+	if len(leaf.Subject.Organization) != 1 || leaf.Subject.Organization[0] != "Quick Create Proxy SOCKS5 VPN" {
+		t.Fatalf("unexpected certificate organization: %v", leaf.Subject.Organization)
+	}
+	if leaf.Issuer.String() != leaf.Subject.String() {
+		t.Fatalf("self-signed certificate issuer differs from subject: %s != %s", leaf.Issuer, leaf.Subject)
+	}
 	for _, host := range []string{"203.0.113.42", "127.0.0.1", "localhost"} {
 		if err := leaf.VerifyHostname(host); err != nil {
 			t.Errorf("certificate rejects %s: %v", host, err)
