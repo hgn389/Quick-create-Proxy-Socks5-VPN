@@ -156,7 +156,8 @@ func (p *panel) secure(next http.Handler) http.Handler {
 			return
 		}
 		if r.Method == http.MethodPost && !sameOrigin(r) {
-			http.Error(w, "invalid origin", http.StatusForbidden)
+			log.Printf("blocked POST with invalid origin: host=%q origin=%q sec-fetch-site=%q sec-fetch-mode=%q remote=%q", r.Host, r.Header.Get("Origin"), r.Header.Get("Sec-Fetch-Site"), r.Header.Get("Sec-Fetch-Mode"), r.RemoteAddr)
+			http.Error(w, "Nguồn yêu cầu không hợp lệ. Hãy tải lại trang bằng đúng địa chỉ HTTPS của panel.", http.StatusForbidden)
 			return
 		}
 		next.ServeHTTP(w, r)
@@ -164,18 +165,24 @@ func (p *panel) secure(next http.Handler) http.Handler {
 }
 
 func sameOrigin(r *http.Request) bool {
-	origin := r.Header.Get("Origin")
+	origin := strings.TrimSpace(r.Header.Get("Origin"))
 	if origin == "" {
 		return true
 	}
+	// Chromium can serialize the origin as "null" after the user accepts an
+	// exception for a self-signed certificate. Fetch Metadata still identifies
+	// a form submission made by this panel as a same-origin navigation. Cross-
+	// site and script requests remain rejected.
+	if origin == "null" {
+		return r.TLS != nil &&
+			r.Header.Get("Sec-Fetch-Site") == "same-origin" &&
+			r.Header.Get("Sec-Fetch-Mode") == "navigate"
+	}
 	u, err := url.Parse(origin)
-	if err != nil || u.Host != r.Host {
+	if err != nil || u.User != nil || u.Path != "" || u.RawQuery != "" || u.Fragment != "" || !strings.EqualFold(u.Host, r.Host) {
 		return false
 	}
-	if u.Scheme == "https" {
-		return true
-	}
-	return u.Scheme == "http" && r.Header.Get("X-Forwarded-Proto") != "https"
+	return strings.EqualFold(u.Scheme, "https") && r.TLS != nil
 }
 
 func (p *panel) loginPage(w http.ResponseWriter, r *http.Request) {

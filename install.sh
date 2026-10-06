@@ -3,7 +3,7 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 readonly APP_NAME="Quick Create Proxy SOCKS5 VPN"
-readonly APP_VERSION="1.0.0-beta.2"
+readonly APP_VERSION="1.0.0-beta.3"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 readonly SCRIPT_DIR
 
@@ -210,7 +210,22 @@ wait_for_panel() {
     fi
     sleep 0.2
   done
+  warn "Panel did not become ready on HTTPS port 22689. Recent service diagnostics follow."
+  systemctl status qcp-agent.service qcp-panel.service --no-pager -l >&2 || true
+  journalctl -u qcp-agent.service -u qcp-panel.service -n 40 --no-pager >&2 || true
   return 1
+}
+
+valid_ipv4() {
+  local address="$1" part
+  local -a parts
+  [[ "$address" =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$ ]] || return 1
+  IFS=. read -r -a parts <<<"$address"
+  [[ "${#parts[@]}" -eq 4 ]] || return 1
+  for part in "${parts[@]}"; do
+    [[ "$part" =~ ^(0|[1-9][0-9]{0,2})$ ]] || return 1
+    (( 10#$part <= 255 )) || return 1
+  done
 }
 
 detect_panel_ip() {
@@ -223,7 +238,20 @@ detect_panel_ip() {
     warn "Public IPv4 discovery failed; using the default-interface IPv4 address. Set QCP_PANEL_IP if this is not reachable externally."
   fi
   [[ -n "$PANEL_IP" ]] || fail "Cannot determine a panel IPv4 address; set QCP_PANEL_IP."
+  valid_ipv4 "$PANEL_IP" || fail "Panel address is not a valid IPv4 address: $PANEL_IP"
   info "Panel address candidate: $PANEL_IP"
+}
+
+print_provider_firewall_hint() {
+  local product=""
+  if [[ -r /sys/class/dmi/id/product_name ]]; then
+    product="$(tr '[:upper:]' '[:lower:]' </sys/class/dmi/id/product_name)"
+  fi
+  case "$product" in
+    *google*) warn "Google Cloud VPC firewall must also allow ingress TCP 22689; opening SSH port 22 does not open the panel port." ;;
+    *vultr*) warn "Vultr Firewall must also allow inbound TCP 22689 when a Vultr Firewall Group is attached." ;;
+    *) info "If the page does not open externally, allow inbound TCP 22689 in the VPS provider firewall/security group." ;;
+  esac
 }
 
 confirm_action() {
@@ -392,7 +420,8 @@ install_qcp() {
     info "Web panel password: 12345687"
     warn "The panel requires this default password to be changed immediately after first login."
   fi
-  info "The host firewall was configured for TCP 22689. If the page does not open, allow the same port in the VPS provider firewall."
+  info "The host firewall was configured for TCP 22689."
+  print_provider_firewall_hint
   info "Backup of replaced QCP files: $BACKUP_DIR"
 }
 
