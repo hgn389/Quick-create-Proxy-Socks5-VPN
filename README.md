@@ -1,4 +1,4 @@
-# Quick Create Proxy SOCKS5 VPN — v1.0.0-beta.4
+# Quick Create Proxy SOCKS5 VPN — v1.0.0-beta.5
 
 Bản beta chạy bằng Go + 3proxy + WireGuard trên Linux/systemd, không cần Docker, database server hay webserver riêng. Panel dùng HTTPS trên cổng TCP `22689`, không chiếm cổng 80/443 của website.
 
@@ -7,17 +7,17 @@ Bản beta chạy bằng Go + 3proxy + WireGuard trên Linux/systemd, không c�
 Đăng nhập VPS bằng SSH, sao chép nguyên lệnh sau và dán vào terminal:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hgn389/Quick-create-Proxy-Socks5-VPN/v1.0.0-beta.4/install-online.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/hgn389/Quick-create-Proxy-Socks5-VPN/v1.0.0-beta.5/install-online.sh | sudo bash
 ```
 
-Lệnh này tải đúng GitHub Release `v1.0.0-beta.4`, kiểm tra SHA256, chọn binary `amd64` hoặc `arm64`, rồi hiển thị kế hoạch cài đặt để xác nhận. Nếu đang đăng nhập trực tiếp bằng `root` và máy không có `sudo`, dùng `| bash` ở cuối lệnh. Sau khi hoàn tất, terminal hiển thị URL webpanel cùng tài khoản ban đầu `admin` / `12345687`.
+Lệnh này tải đúng GitHub Release `v1.0.0-beta.5`, kiểm tra SHA256, chọn binary `amd64` hoặc `arm64`, rồi hiển thị kế hoạch cài đặt để xác nhận. Nếu đang đăng nhập trực tiếp bằng `root` và máy không có `sudo`, dùng `| bash` ở cuối lệnh. Sau khi hoàn tất, terminal hiển thị URL webpanel cùng tài khoản ban đầu `admin` / `12345687`.
 
 > Lệnh cài nhanh chỉ hoạt động sau khi tag và GitHub Release tương ứng đã được xuất bản. Trước thời điểm đó, dùng gói phát hành cục bộ theo phần cài đặt thủ công bên dưới.
 
 ## Tình trạng chức năng
 
 - Panel một tài khoản quản trị mặc định `admin` / `12345687`, buộc đổi mật khẩu ngay sau lần đăng nhập đầu tiên, giới hạn thử đăng nhập, phiên và CSRF. Bộ cài tạo chứng chỉ HTTPS riêng cho IP panel.
-- Tạo, bật, tắt, xóa SOCKS5 và HTTP proxy có `CONNECT` cho HTTPS. Mỗi proxy có user/mật khẩu riêng, port riêng, quyền đọc file riêng. Mặc định chỉ nghe trên localhost; muốn truy cập từ bên ngoài phải nhập IPv4 CIDR nguồn khi tạo.
+- Nút tạo nhanh SOCKS5 hoặc HTTP proxy có `CONNECT` cho HTTPS: QCP tự chọn cổng, sinh user/mật khẩu, mở firewall trên VPS và trả ngay một dòng `IP:PORT:USER:PASSWORD`. Phần tùy chỉnh vẫn cho phép chọn tên, cổng và IPv4 CIDR nguồn.
 - Khởi tạo WireGuard, tạo peer iPhone, QR/cấu hình hiện một lần, bật/tắt/thu hồi peer, xem handshake và byte nhận/gửi hiện tại. Peer chỉ lưu khóa công khai. Có full tunnel và split tunnel chỉ tới mạng WireGuard nội bộ; full tunnel đưa IPv6 vào tunnel nhưng chưa có NAT/routing IPv6 ra Internet.
 - Cài/nâng cấp tại chỗ có bản sao của binary, unit và admin hash cũ; tự khôi phục các file đó nếu giai đoạn thay thế thất bại. Gỡ cài đặt giữ lại cấu hình và dữ liệu nhạy cảm trên VPS.
 - Footer có `Check Update`: tra cứu GitHub Release của dự án. Khi có bản mới, nút cập nhật tải gói, kiểm tra SHA256 do GitHub công bố, rồi chạy bộ cài trong một systemd unit riêng.
@@ -26,10 +26,10 @@ Lệnh này tải đúng GitHub Release `v1.0.0-beta.4`, kiểm tra SHA256, ch�
 
 ## Cài đặt từ gói phát hành
 
-Giải nén gói `qcp-v1.0.0-beta.4-linux-amd64-arm64.tar.gz` trên VPS rồi chạy:
+Giải nén gói `qcp-v1.0.0-beta.5-linux-amd64-arm64.tar.gz` trên VPS rồi chạy:
 
 ```sh
-cd qcp-v1.0.0-beta.4
+cd qcp-v1.0.0-beta.5
 ./install.sh --check
 sudo ./install.sh --install
 ```
@@ -44,7 +44,7 @@ sudo QCP_PANEL_IP=203.0.113.10 ./install.sh --install
 
 Có thể dùng SSH tunnel nếu muốn giới hạn truy cập qua SSH: `ssh -L 22689:127.0.0.1:22689 user@IP_VPS`, rồi mở `https://127.0.0.1:22689`.
 
-Muốn kết nối proxy từ xa, nhập IPv4 CIDR nguồn cụ thể, ví dụ `203.0.113.4/32`, và mở đúng cổng TCP ở firewall VPS/nhà cung cấp. Để trống sẽ chỉ cho localhost. Không dùng `0.0.0.0/0` trừ khi thật sự cần và đã tự kiểm soát truy cập.
+Nút tạo nhanh cho phép kết nối từ mọi IPv4 và tự mở đúng cổng TCP trong UFW, firewalld hoặc iptables của VPS. Nếu nhà cung cấp VPS có firewall/security group riêng, cho phép cổng vừa được hiển thị hoặc dải TCP `10000-19999`. Proxy tùy chỉnh có thể giới hạn IPv4 CIDR nguồn, ví dụ `203.0.113.4/32`; để trống sẽ chỉ cho localhost.
 
 SOCKS5 và HTTP proxy cơ bản gửi thông tin xác thực theo dạng có thể đọc trên đường truyền. Với mạng không tin cậy, hãy dùng proxy qua WireGuard/SSH hoặc một lớp TLS do bạn cấu hình riêng.
 
@@ -59,7 +59,7 @@ sudo ./install.sh --install
 sudo ./install.sh --uninstall
 ```
 
-Gỡ cài đặt dừng các dịch vụ QCP, gỡ rule TCP 22689 do QCP tạo và xóa binary/unit; `/etc/qcp`, `/etc/wireguard/qcp-wg0.conf` và `/var/lib/qcp` vẫn ở VPS để không mất khóa hoặc metadata. Nếu cần xóa hoàn toàn, hãy tự sao lưu rồi xóa các thư mục này sau khi xác nhận không còn dùng tunnel. Tránh đưa các file đó vào GitHub hoặc gói phát hành.
+Gỡ cài đặt dừng các dịch vụ QCP, gỡ rule TCP 22689 và các rule cổng proxy do QCP tạo, rồi xóa binary/unit; `/etc/qcp`, `/etc/wireguard/qcp-wg0.conf` và `/var/lib/qcp` vẫn ở VPS để không mất khóa hoặc metadata. Nếu cần xóa hoàn toàn, hãy tự sao lưu rồi xóa các thư mục này sau khi xác nhận không còn dùng tunnel. Tránh đưa các file đó vào GitHub hoặc gói phát hành.
 
 ## Xây dựng gói trên máy phát triển
 

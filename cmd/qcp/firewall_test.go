@@ -21,3 +21,13 @@ func TestUFWAllowsPanel(t *testing.T) {
 		}
 	}
 }
+
+func TestUFWAllowsTCPPort(t *testing.T) {
+	status := "Status: active\n10037/tcp                 ALLOW       Anywhere\n10037/tcp (v6)            ALLOW       Anywhere (v6)"
+	if !ufwAllowsTCPPort(status, 10037) {
+		t.Fatal("custom proxy port allow rule was not recognized")
+	}
+	if ufwAllowsTCPPort(status, 10038) {
+		t.Fatal("different proxy port was incorrectly accepted")
+	}
+}

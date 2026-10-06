@@ -3,7 +3,7 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 readonly APP_NAME="Quick Create Proxy SOCKS5 VPN"
-readonly APP_VERSION="1.0.0-beta.4"
+readonly APP_VERSION="1.0.0-beta.5"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 readonly SCRIPT_DIR
 
@@ -332,7 +332,10 @@ rollback_install() {
   trap - ERR
   set +e
   warn "Installation failed. Restoring previous QCP binaries and units."
-  if [[ -x /usr/local/bin/qcp ]]; then /usr/local/bin/qcp firewall down >/dev/null 2>&1 || true; fi
+  if [[ -x /usr/local/bin/qcp ]]; then
+    /usr/local/bin/qcp proxy-firewalls down >/dev/null 2>&1 || true
+    /usr/local/bin/qcp firewall down >/dev/null 2>&1 || true
+  fi
   systemctl stop qcp-panel.service qcp-firewall.service qcp-agent.service >/dev/null 2>&1
   local item
   for item in \
@@ -432,7 +435,7 @@ Removal plan:
   Stop and disable QCP WireGuard, panel, agent and proxy services.
   Remove QCP-owned service units and binaries.
   Preserve /etc/qcp and /var/lib/qcp, including credentials and backups.
-  Remove the QCP-owned panel port rule and WireGuard NAT table. Leave other firewall rules untouched.
+  Remove QCP-owned panel/proxy port rules and the WireGuard NAT table. Leave other firewall rules untouched.
 EOF
   confirm_action
   local config id
@@ -449,6 +452,7 @@ EOF
       systemctl disable --now "qcp-proxy@$id.service" >/dev/null 2>&1 || true
     done
   fi
+  if [[ -x /usr/local/bin/qcp ]]; then /usr/local/bin/qcp proxy-firewalls down >/dev/null 2>&1 || true; fi
   systemctl disable --now qcp-panel.service qcp-agent.service >/dev/null 2>&1 || true
   rm -f -- \
     /etc/systemd/system/qcp-agent.service \

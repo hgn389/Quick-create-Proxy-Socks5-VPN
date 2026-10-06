@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"crypto/tls"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -63,5 +65,39 @@ func TestSameOrigin(t *testing.T) {
 				t.Fatalf("sameOrigin() = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestDashboardShowsQuickProxyActions(t *testing.T) {
+	var output bytes.Buffer
+	if err := basePage.Execute(&output, pageData{Title: "Tổng quan", CSRF: "test-csrf"}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{
+		`action="/proxies/quick/socks5"`,
+		`action="/proxies/quick/http"`,
+		`value="test-csrf"`,
+		`IP:PORT:USER:PASSWORD`,
+	} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("dashboard does not contain %q", want)
+		}
+	}
+}
+
+func TestProxyResultShowsConnectionString(t *testing.T) {
+	var output bytes.Buffer
+	data := pageData{
+		Title:       "Thông tin proxy",
+		Proxy:       proxyView{Kind: "socks5", Port: 10000, SourceCIDR: "0.0.0.0/0"},
+		ProxyAccess: "203.0.113.10:10000:qcp_user:test-password",
+	}
+	if err := basePage.Execute(&output, data); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"203.0.113.10:10000:qcp_user:test-password", "TCP 10000", "SOCKS5"} {
+		if !strings.Contains(output.String(), want) {
+			t.Fatalf("proxy result does not contain %q", want)
+		}
 	}
 }

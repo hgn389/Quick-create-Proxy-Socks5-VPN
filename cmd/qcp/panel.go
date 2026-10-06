@@ -54,7 +54,7 @@ type pageData struct {
 		Proxies        []proxyView `json:"proxies"`
 	}
 	Proxy        proxyView
-	Password     string
+	ProxyAccess  string
 	WireGuard    wireguardView
 	Peer         wireguardPeer
 	ClientConfig string
@@ -85,7 +85,7 @@ small{color:#64748b;display:block;margin:.25rem 0 .7rem}h1{margin-top:0}footer{m
 {{else if eq .Title "Cập nhật"}}
 <section class="card"><h1>Cập nhật phần mềm</h1><p>Phiên bản đang chạy: <strong>v{{.AppVersion}}</strong></p>{{if .Update.Latest}}<p>Phiên bản GitHub Release mới nhất: <strong>v{{.Update.Latest}}</strong>{{if .Update.Prerelease}} (beta){{end}}</p>{{if .Update.Available}}<p>Có phiên bản mới. Dịch vụ sẽ tạm ngắt trong lúc cập nhật.</p><form method="post" action="/update/apply"><input type="hidden" name="csrf" value="{{.CSRF}}"><button>Cập nhật lên phiên bản mới nhất</button></form>{{else}}<p>Đây là phiên bản mới nhất đang có trên GitHub Release.</p>{{end}}{{else}}{{if ne .Update.State.Phase "queued"}}<p>Chưa có bản phát hành nào kèm gói cài đã xác minh trên GitHub.</p>{{end}}{{end}}{{if .Update.State.Phase}}<p>Trạng thái cập nhật: <strong>{{.Update.State.Phase}}</strong> {{.Update.State.Message}}</p>{{end}}<p><a class="button secondary" href="/update/check">Kiểm tra lại</a> <a class="button secondary" href="/">Về tổng quan</a></p></section>
 {{else if eq .Title "Thông tin proxy"}}
-<section class="card"><h1>Proxy đã được tạo</h1><p>Thông tin đăng nhập này chỉ hiển thị một lần. Hãy lưu vào nơi an toàn.</p><p><strong>{{.Proxy.Kind}}</strong> · cổng {{.Proxy.Port}} · tài khoản {{.Proxy.Username}}</p><div class="secret">Mật khẩu: {{.Password}}</div><p><a class="button" href="/">Về tổng quan</a></p></section>
+<section class="card"><h1>Proxy đã sẵn sàng</h1><p>Sao chép dòng dưới đây để sử dụng. Thông tin này chỉ hiển thị một lần.</p><p><strong>{{if eq .Proxy.Kind "socks5"}}SOCKS5{{else}}HTTP + HTTPS CONNECT{{end}}</strong></p><div class="secret">{{.ProxyAccess}}</div><small>Định dạng: IP:PORT:USER:PASSWORD</small>{{if .Proxy.SourceCIDR}}<p class="notice">QCP đã mở cổng {{.Proxy.Port}} trên firewall của Ubuntu. Nếu nhà cung cấp VPS có firewall hoặc security group riêng, hãy cho phép TCP {{.Proxy.Port}} tại đó.</p>{{else}}<p class="notice">Proxy tùy chỉnh này chỉ nghe trên VPS. Hãy dùng ngay trên máy chủ hoặc tạo proxy nhanh để kết nối từ bên ngoài.</p>{{end}}<p><a class="button" href="/">Về tổng quan</a></p></section>
 {{else if eq .Title "Cấu hình WireGuard"}}
 <section class="card"><h1>Thiết bị đã được tạo: {{.Peer.Name}}</h1><p>Quét QR trong ứng dụng WireGuard trên iPhone hoặc sao chép cấu hình. Khóa riêng chỉ hiển thị ở trang này; rời trang sẽ không xem lại được.</p><img class="qr" src="{{.QRCode}}" alt="QR WireGuard riêng cho thiết bị"><div class="secret">{{.ClientConfig}}</div><p><a class="button" href="/">Về tổng quan</a></p></section>
 {{else if eq .Title "Xác nhận thu hồi"}}
@@ -94,11 +94,12 @@ small{color:#64748b;display:block;margin:.25rem 0 .7rem}h1{margin-top:0}footer{m
 <section class="card"><h1>Xóa proxy?</h1><p>Bạn sắp xóa <strong>{{.Proxy.Name}}</strong> trên cổng {{.Proxy.Port}}. Kết nối đang dùng sẽ bị ngắt.</p><div class="row"><form method="post" action="/proxies/{{.Proxy.ID}}/delete"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="danger">Xóa proxy</button></form><a class="button secondary" href="/">Hủy</a></div></section>
 {{else}}
 <h1>Tổng quan</h1><div class="grid"><section class="card"><div class="muted">Proxy đang chạy</div><div class="metric">{{.Status.RunningProxies}}</div></section><section class="card"><div class="muted">Tổng proxy</div><div class="metric">{{.Status.ProxyCount}}</div></section><section class="card"><div class="muted">Thiết bị WireGuard</div><div class="metric">{{len .WireGuard.Peers}}</div></section><section class="card"><div class="muted">Phiên bản</div><div class="metric" style="font-size:1.1rem">{{.Status.Version}}</div></section></div>
+<section class="card"><h2>Tạo proxy nhanh</h2><p>QCP tự chọn cổng trống, sinh tài khoản và mật khẩu mạnh, khởi chạy dịch vụ rồi mở cổng trên firewall của Ubuntu.</p><div class="row"><form method="post" action="/proxies/quick/socks5"><input type="hidden" name="csrf" value="{{.CSRF}}"><button>Tạo SOCKS5 ngay</button></form><form method="post" action="/proxies/quick/http"><input type="hidden" name="csrf" value="{{.CSRF}}"><button>Tạo HTTP/HTTPS ngay</button></form></div><small>Proxy nhanh cho phép kết nối từ mọi IP và được bảo vệ bằng user/password ngẫu nhiên. Sau khi tạo, panel hiển thị một dòng IP:PORT:USER:PASSWORD.</small></section>
 <section class="card"><h2>WireGuard VPN</h2>{{if .WireGuard.Initialized}}<p>Endpoint: {{.WireGuard.Endpoint}}:{{.WireGuard.Port}} · {{if .WireGuard.Running}}Đang chạy{{else}}Đã dừng; kiểm tra dịch vụ wg-quick@qcp-wg0{{end}}</p><div class="row">{{if .WireGuard.Running}}<form method="post" action="/wireguard/disable"><input type="hidden" name="csrf" value="{{.CSRF}}"><button class="secondary">Dừng VPN</button></form>{{else}}<form method="post" action="/wireguard/enable"><input type="hidden" name="csrf" value="{{.CSRF}}"><button>Bật VPN</button></form>{{end}}</div><form method="post" action="/wireguard/peers"><input type="hidden" name="csrf" value="{{.CSRF}}"><label for="peer_name">Tên thiết bị</label><input id="peer_name" name="name" maxlength="32" required placeholder="iphone-ca-nhan"><label for="peer_mode">Chế độ định tuyến</label><select id="peer_mode" name="mode"><option value="full">Full tunnel (Internet qua VPS)</option><option value="split">Split tunnel (chỉ mạng WireGuard nội bộ)</option></select><p><button type="submit">Tạo thiết bị và hiện QR</button></p></form><div class="scroll"><table><thead><tr><th>Thiết bị</th><th>IP nội bộ</th><th>Chế độ</th><th>Trạng thái</th><th>Handshake gần nhất</th><th>Lưu lượng nhận/gửi</th><th>Thao tác</th></tr></thead><tbody>{{range .WireGuard.Peers}}<tr><td>{{.Name}}</td><td>{{.Address}}</td><td>{{.Mode}}</td><td>{{if .Enabled}}Bật{{else}}Tắt{{end}}</td><td>{{if .LatestHandshake}}{{.LatestHandshake}}{{else}}Chưa có{{end}}</td><td>{{.RXBytes}} / {{.TXBytes}} B</td><td><div class="row">{{if .Enabled}}<form method="post" action="/wireguard/peers/{{.ID}}/disable"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="secondary">Tắt</button></form>{{else}}<form method="post" action="/wireguard/peers/{{.ID}}/enable"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button>Bật</button></form>{{end}}<a class="button secondary" href="/wireguard/peers/{{.ID}}/confirm-delete">Thu hồi</a></div></td></tr>{{else}}<tr><td colspan="7" class="muted">Chưa có thiết bị.</td></tr>{{end}}</tbody></table></div>{{else}}<p>Khởi tạo một lần để tạo khóa server. Cần kernel WireGuard, wireguard-tools và nftables. Cổng UDP phải được mở tại nhà cung cấp VPS.</p><form method="post" action="/wireguard"><input type="hidden" name="csrf" value="{{.CSRF}}"><label for="wg_endpoint">IP public hoặc tên miền của VPS</label><input id="wg_endpoint" name="endpoint" required placeholder="203.0.113.10"><label for="wg_port">Cổng UDP</label><input id="wg_port" name="port" type="number" value="51820" min="1024" max="65535" required><p><button type="submit">Khởi tạo WireGuard</button></p></form>{{end}}</section>
-<section class="card"><h2>Tạo proxy</h2><form method="post" action="/proxies"><input type="hidden" name="csrf" value="{{.CSRF}}"><label for="kind">Loại</label><select name="kind" id="kind"><option value="socks5">SOCKS5</option><option value="http">HTTP proxy + HTTPS CONNECT</option></select>
+<section class="card"><details><summary><strong>Tạo proxy tùy chỉnh</strong></summary><form method="post" action="/proxies"><input type="hidden" name="csrf" value="{{.CSRF}}"><label for="kind">Loại</label><select name="kind" id="kind"><option value="socks5">SOCKS5</option><option value="http">HTTP proxy + HTTPS CONNECT</option></select>
 <label for="name">Tên</label><input id="name" name="name" required maxlength="64" placeholder="mobile-01"><label for="port">Cổng TCP (10000–19999)</label><input id="port" name="port" type="number" min="10000" max="19999" required>
 <label for="username">Tên đăng nhập</label><input id="username" name="username" required maxlength="32" placeholder="user01"><label for="source_cidr">IP nguồn được phép (IPv4 CIDR)</label><input id="source_cidr" name="source_cidr" placeholder="Để trống: chỉ truy cập từ VPS"><small>Ví dụ 203.0.113.4/32. Chọn 0.0.0.0/0 chỉ khi cần truy cập từ mọi IP và đã kiểm tra firewall.</small>
-<p><button type="submit">Tạo proxy</button></p></form></section>
+<p><button type="submit">Tạo proxy</button></p></form></details></section>
 <section class="card"><h2>Danh sách proxy</h2><div class="scroll"><table><thead><tr><th>Tên</th><th>Loại</th><th>Cổng</th><th>IP nguồn</th><th>Trạng thái</th><th>Thao tác</th></tr></thead><tbody>{{range .Status.Proxies}}<tr><td>{{.Name}}</td><td>{{.Kind}}</td><td>{{.Port}}</td><td>{{if .SourceCIDR}}{{.SourceCIDR}}{{else}}Chỉ trên VPS{{end}}</td><td>{{if .Running}}Đang chạy{{else}}Đã dừng{{end}}</td><td><div class="row">{{if .Enabled}}<form method="post" action="/proxies/{{.ID}}/disable"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="secondary">Dừng</button></form><form method="post" action="/proxies/{{.ID}}/restart"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button class="secondary">Khởi động lại</button></form>{{else}}<form method="post" action="/proxies/{{.ID}}/enable"><input type="hidden" name="csrf" value="{{$.CSRF}}"><button>Kích hoạt</button></form>{{end}}<a class="button secondary" href="/proxies/{{.ID}}/confirm-delete">Xóa</a></div></td></tr>{{else}}<tr><td colspan="6" class="muted">Chưa có proxy.</td></tr>{{end}}</tbody></table></div></section>
 {{end}}</main><footer>v{{.AppVersion}}{{if .CSRF}} · <a href="/update/check">Check Update</a> · <a href="/admin/password">Đổi mật khẩu</a>{{end}}</footer></body></html>`))
 
@@ -118,6 +119,7 @@ func runPanel() error {
 	mux.HandleFunc("GET /admin/password", p.passwordPage)
 	mux.HandleFunc("POST /admin/password", p.changePassword)
 	mux.HandleFunc("POST /proxies", p.createProxy)
+	mux.HandleFunc("POST /proxies/quick/{kind}", p.createQuickProxy)
 	mux.HandleFunc("POST /wireguard", p.initializeWireGuard)
 	mux.HandleFunc("POST /wireguard/{action}", p.wireguardServiceAction)
 	mux.HandleFunc("POST /wireguard/peers", p.createWireGuardPeer)
@@ -429,7 +431,37 @@ func (p *panel) createProxy(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/?notice="+url.QueryEscape("Tạo proxy lỗi: "+err.Error()), http.StatusSeeOther)
 		return
 	}
-	p.render(w, pageData{Title: "Thông tin proxy", CSRF: s.CSRF, Proxy: result.Proxy, Password: result.Password})
+	p.renderProxyResult(w, s, result)
+}
+
+func (p *panel) createQuickProxy(w http.ResponseWriter, r *http.Request) {
+	s, ok := p.requireSession(w, r, true)
+	if !ok {
+		return
+	}
+	kind := r.PathValue("kind")
+	if kind != "socks5" && kind != "http" {
+		http.NotFound(w, r)
+		return
+	}
+	var result createProxyResponse
+	if err := agentRequest(http.MethodPost, "/v1/proxies", createProxyRequest{Kind: kind}, &result); err != nil {
+		http.Redirect(w, r, "/?notice="+url.QueryEscape("Tạo proxy nhanh lỗi: "+err.Error()), http.StatusSeeOther)
+		return
+	}
+	p.renderProxyResult(w, s, result)
+}
+
+func (p *panel) renderProxyResult(w http.ResponseWriter, s session, result createProxyResponse) {
+	host := "127.0.0.1"
+	if result.Proxy.SourceCIDR != "" {
+		host = "IP_VPS"
+		if configured, err := os.ReadFile(panelHostPath); err == nil && strings.TrimSpace(string(configured)) != "" {
+			host = strings.TrimSpace(string(configured))
+		}
+	}
+	access := fmt.Sprintf("%s:%d:%s:%s", host, result.Proxy.Port, result.Proxy.Username, result.Password)
+	p.render(w, pageData{Title: "Thông tin proxy", CSRF: s.CSRF, Proxy: result.Proxy, ProxyAccess: access})
 }
 
 func (p *panel) initializeWireGuard(w http.ResponseWriter, r *http.Request) {

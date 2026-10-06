@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	version              = "1.0.0-beta.4"
+	version              = "1.0.0-beta.5"
 	etcDir               = "/etc/qcp"
 	stateDir             = "/var/lib/qcp"
 	runDir               = "/run/qcp"
@@ -121,6 +121,12 @@ func main() {
 		} else {
 			err = panelFirewall(os.Args[2])
 		}
+	case "proxy-firewalls":
+		if len(os.Args) != 3 || os.Args[2] != "down" {
+			err = errors.New("usage: qcp proxy-firewalls down")
+		} else if err = mustRoot(); err == nil {
+			err = removeAllProxyFirewalls()
+		}
 	default:
 		usage()
 		os.Exit(2)
@@ -132,7 +138,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintln(os.Stderr, "Usage: qcp version|doctor|agent|panel|admin bootstrap|admin rotate|panel-cert IPv4_ADDRESS|update apply TAG|firewall up|down|wg-route up|down")
+	fmt.Fprintln(os.Stderr, "Usage: qcp version|doctor|agent|panel|admin bootstrap|admin rotate|panel-cert IPv4_ADDRESS|update apply TAG|firewall up|down|proxy-firewalls down|wg-route up|down")
 }
 
 func mustRoot() error {
@@ -249,6 +255,9 @@ func runAgent() error {
 		return err
 	}); err != nil {
 		return err
+	}
+	if err := restoreEnabledProxyFirewalls(db); err != nil {
+		log.Printf("restore proxy firewall rules: %v", err)
 	}
 	group, err := user.LookupGroup("qcp")
 	if err != nil {
@@ -442,12 +451,26 @@ func (a *agent) createProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	password, err := proxycfg.NewPassword()
+	id, err := proxycfg.NewID()
 	if err != nil {
 		apiError(w, err, http.StatusInternalServerError)
 		return
 	}
-	id, err := proxycfg.NewID()
+	if input.Port == 0 {
+		if input.Kind != "socks5" && input.Kind != "http" {
+			apiError(w, errors.New("quick proxy kind must be socks5 or http"), http.StatusBadRequest)
+			return
+		}
+		input.Port, err = a.nextAvailableProxyPort()
+		if err != nil {
+			apiError(w, err, http.StatusConflict)
+			return
+		}
+		input.Name = "quick-" + input.Kind + "-" + id[:6]
+		input.Username = "qcp_" + id[:8]
+		input.SourceCIDR = "0.0.0.0/0"
+	}
+	password, err := proxycfg.NewPassword()
 	if err != nil {
 		apiError(w, err, http.StatusInternalServerError)
 		return
@@ -486,15 +509,29 @@ func (a *agent) createProxy(w http.ResponseWriter, r *http.Request) {
 		apiError(w, err, http.StatusInternalServerError)
 		return
 	}
+	external := p.SourceCIDR != ""
+	if external {
+		if err := ensureProxyFirewall(p.ID, p.Port); err != nil {
+			_ = os.Remove(path)
+			apiError(w, fmt.Errorf("proxy firewall could not open port: %w", err), http.StatusInternalServerError)
+			return
+		}
+	}
 	unit := fmt.Sprintf(proxyUnitName, p.ID)
 	if err := systemctl("enable", "--now", unit); err != nil {
 		_ = systemctl("disable", "--now", unit)
+		if external {
+			_ = removeProxyFirewall(p.ID)
+		}
 		_ = os.Remove(path)
 		apiError(w, fmt.Errorf("proxy service could not start: %w", err), http.StatusInternalServerError)
 		return
 	}
 	if err := waitPort(p.Port); err != nil {
 		_ = systemctl("disable", "--now", unit)
+		if external {
+			_ = removeProxyFirewall(p.ID)
+		}
 		_ = os.Remove(path)
 		apiError(w, fmt.Errorf("proxy listener failed health check: %w", err), http.StatusInternalServerError)
 		return
@@ -510,6 +547,9 @@ func (a *agent) createProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		_ = systemctl("disable", "--now", unit)
+		if external {
+			_ = removeProxyFirewall(p.ID)
+		}
 		_ = os.Remove(path)
 		apiError(w, err, http.StatusInternalServerError)
 		return
@@ -519,6 +559,46 @@ func (a *agent) createProxy(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(http.StatusCreated)
 	_ = json.NewEncoder(w).Encode(createProxyResponse{Proxy: v, Password: password})
+}
+
+func (a *agent) nextAvailableProxyPort() (int, error) {
+	assigned := make(map[int]bool)
+	if err := a.db.View(func(tx *bbolt.Tx) error {
+		return tx.Bucket(proxyBucket).ForEach(func(_, value []byte) error {
+			var p proxycfg.Spec
+			if err := json.Unmarshal(value, &p); err != nil {
+				return err
+			}
+			assigned[p.Port] = true
+			return nil
+		})
+	}); err != nil {
+		return 0, err
+	}
+	for port := 10000; port <= 19999; port++ {
+		if assigned[port] {
+			continue
+		}
+		if err := portAvailable(port); err == nil {
+			return port, nil
+		}
+	}
+	return 0, errors.New("no free proxy port is available in 10000–19999")
+}
+
+func restoreEnabledProxyFirewalls(db *bbolt.DB) error {
+	return db.View(func(tx *bbolt.Tx) error {
+		return tx.Bucket(proxyBucket).ForEach(func(_, value []byte) error {
+			var p proxycfg.Spec
+			if err := json.Unmarshal(value, &p); err != nil {
+				return err
+			}
+			if p.Enabled && p.SourceCIDR != "" {
+				return ensureProxyFirewall(p.ID, p.Port)
+			}
+			return nil
+		})
+	})
 }
 
 func (a *agent) assertPortUnused(port int) error {
@@ -581,18 +661,33 @@ func (a *agent) enableProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	unit := fmt.Sprintf(proxyUnitName, p.ID)
+	if p.SourceCIDR != "" {
+		if err := ensureProxyFirewall(p.ID, p.Port); err != nil {
+			apiError(w, err, http.StatusInternalServerError)
+			return
+		}
+	}
 	if err := systemctl("enable", "--now", unit); err != nil {
+		if p.SourceCIDR != "" {
+			_ = removeProxyFirewall(p.ID)
+		}
 		apiError(w, err, http.StatusInternalServerError)
 		return
 	}
 	if err := waitPort(p.Port); err != nil {
 		_ = systemctl("disable", "--now", unit)
+		if p.SourceCIDR != "" {
+			_ = removeProxyFirewall(p.ID)
+		}
 		apiError(w, err, http.StatusInternalServerError)
 		return
 	}
 	p.Enabled = true
 	if err := a.updateProxy(p, "proxy.enable"); err != nil {
 		_ = systemctl("disable", "--now", unit)
+		if p.SourceCIDR != "" {
+			_ = removeProxyFirewall(p.ID)
+		}
 		apiError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -612,8 +707,19 @@ func (a *agent) disableProxy(w http.ResponseWriter, r *http.Request) {
 		apiError(w, err, http.StatusInternalServerError)
 		return
 	}
+	if p.SourceCIDR != "" {
+		if err := removeProxyFirewall(p.ID); err != nil {
+			_ = systemctl("enable", "--now", unit)
+			apiError(w, err, http.StatusInternalServerError)
+			return
+		}
+	}
 	p.Enabled = false
 	if err := a.updateProxy(p, "proxy.disable"); err != nil {
+		if p.SourceCIDR != "" {
+			_ = ensureProxyFirewall(p.ID, p.Port)
+		}
+		_ = systemctl("enable", "--now", unit)
 		apiError(w, err, http.StatusInternalServerError)
 		return
 	}
@@ -631,6 +737,12 @@ func (a *agent) restartProxy(w http.ResponseWriter, r *http.Request) {
 	if !p.Enabled {
 		apiError(w, errors.New("proxy is disabled"), http.StatusConflict)
 		return
+	}
+	if p.SourceCIDR != "" {
+		if err := ensureProxyFirewall(p.ID, p.Port); err != nil {
+			apiError(w, err, http.StatusInternalServerError)
+			return
+		}
 	}
 	if err := systemctl("restart", fmt.Sprintf(proxyUnitName, p.ID)); err != nil {
 		apiError(w, err, http.StatusInternalServerError)
@@ -661,6 +773,13 @@ func (a *agent) deleteProxy(w http.ResponseWriter, r *http.Request) {
 	if err := systemctl("disable", "--now", unit); err != nil {
 		apiError(w, err, http.StatusInternalServerError)
 		return
+	}
+	if p.SourceCIDR != "" {
+		if err := removeProxyFirewall(p.ID); err != nil {
+			_ = systemctl("enable", "--now", unit)
+			apiError(w, err, http.StatusInternalServerError)
+			return
+		}
 	}
 	if err := os.Remove(proxyConfigPath(p.ID)); err != nil && !errors.Is(err, os.ErrNotExist) {
 		apiError(w, err, http.StatusInternalServerError)
