@@ -136,7 +136,7 @@ func (p *panel) secure(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Referrer-Policy", "same-origin")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; img-src data:; form-action 'self'; frame-ancestors 'none'; base-uri 'none'")
 		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
@@ -169,10 +169,10 @@ func sameOrigin(r *http.Request) bool {
 	if origin == "" {
 		return true
 	}
-	// Chromium can serialize the origin as "null" after the user accepts an
-	// exception for a self-signed certificate. Fetch Metadata still identifies
-	// a form submission made by this panel as a same-origin navigation. Cross-
-	// site and script requests remain rejected.
+	// Cached pages, privacy tools and opaque documents can serialize an origin
+	// as "null". Fetch Metadata still identifies a form submission made by this
+	// panel as a same-origin navigation. Cross-site and script requests remain
+	// rejected.
 	if origin == "null" {
 		return r.TLS != nil &&
 			r.Header.Get("Sec-Fetch-Site") == "same-origin" &&

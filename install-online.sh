@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 IFS=$'\n\t'
 
-readonly QCP_VERSION="1.0.0-beta.3"
+readonly QCP_VERSION="1.0.0-beta.4"
 readonly QCP_REPOSITORY="hgn389/Quick-create-Proxy-Socks5-VPN"
 readonly QCP_ARCHIVE="qcp-v${QCP_VERSION}-linux-amd64-arm64.tar.gz"
 readonly QCP_RELEASE_URL="https://github.com/${QCP_REPOSITORY}/releases/download/v${QCP_VERSION}"

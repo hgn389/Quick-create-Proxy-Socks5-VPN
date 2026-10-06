@@ -4,9 +4,9 @@ Repository đích: `https://github.com/hgn389/Quick-create-Proxy-Socks5-VPN` (nh
 
 ## Quy ước để nút Check Update hoạt động
 
-- Tag của phiên bản này: `v1.0.0-beta.3`; các bản sau dùng `vMAJOR.MINOR.PATCH` hoặc `vMAJOR.MINOR.PATCH-beta.N`.
+- Tag của phiên bản này: `v1.0.0-beta.4`; các bản sau dùng `vMAJOR.MINOR.PATCH` hoặc `vMAJOR.MINOR.PATCH-beta.N`.
 - File `VERSION` và hằng `version` trong `cmd/qcp/main.go` phải khớp tag sau khi bỏ chữ `v`.
-- GitHub Release phải chứa asset `qcp-<tag>-linux-amd64-arm64.tar.gz`, ví dụ `qcp-v1.0.0-beta.3-linux-amd64-arm64.tar.gz`.
+- GitHub Release phải chứa asset `qcp-<tag>-linux-amd64-arm64.tar.gz`, ví dụ `qcp-v1.0.0-beta.4-linux-amd64-arm64.tar.gz`.
 - Phải đính kèm `dist/release/SHA256SUMS` với đúng tên asset `SHA256SUMS`; lệnh cài nhanh dùng file này để xác minh archive. Auto updater yêu cầu thêm trường `digest: sha256:...` trong GitHub Release API và so sánh với file tải về. GitHub chưa có Release thì panel báo chưa có bản cập nhật.
 - Bản beta phát hành bằng Release đánh dấu `prerelease`; auto updater vẫn thấy các bản beta mới hơn.
 

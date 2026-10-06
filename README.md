@@ -1,4 +1,4 @@
-# Quick Create Proxy SOCKS5 VPN — v1.0.0-beta.3
+# Quick Create Proxy SOCKS5 VPN — v1.0.0-beta.4
 
 Bản beta chạy bằng Go + 3proxy + WireGuard trên Linux/systemd, không cần Docker, database server hay webserver riêng. Panel dùng HTTPS trên cổng TCP `22689`, không chiếm cổng 80/443 của website.
 
@@ -7,10 +7,10 @@ Bản beta chạy bằng Go + 3proxy + WireGuard trên Linux/systemd, không c�
 Đăng nhập VPS bằng SSH, sao chép nguyên lệnh sau và dán vào terminal:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hgn389/Quick-create-Proxy-Socks5-VPN/v1.0.0-beta.3/install-online.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/hgn389/Quick-create-Proxy-Socks5-VPN/v1.0.0-beta.4/install-online.sh | sudo bash
 ```
 
-Lệnh này tải đúng GitHub Release `v1.0.0-beta.3`, kiểm tra SHA256, chọn binary `amd64` hoặc `arm64`, rồi hiển thị kế hoạch cài đặt để xác nhận. Nếu đang đăng nhập trực tiếp bằng `root` và máy không có `sudo`, dùng `| bash` ở cuối lệnh. Sau khi hoàn tất, terminal hiển thị URL webpanel cùng tài khoản ban đầu `admin` / `12345687`.
+Lệnh này tải đúng GitHub Release `v1.0.0-beta.4`, kiểm tra SHA256, chọn binary `amd64` hoặc `arm64`, rồi hiển thị kế hoạch cài đặt để xác nhận. Nếu đang đăng nhập trực tiếp bằng `root` và máy không có `sudo`, dùng `| bash` ở cuối lệnh. Sau khi hoàn tất, terminal hiển thị URL webpanel cùng tài khoản ban đầu `admin` / `12345687`.
 
 > Lệnh cài nhanh chỉ hoạt động sau khi tag và GitHub Release tương ứng đã được xuất bản. Trước thời điểm đó, dùng gói phát hành cục bộ theo phần cài đặt thủ công bên dưới.
 
@@ -26,10 +26,10 @@ Lệnh này tải đúng GitHub Release `v1.0.0-beta.3`, kiểm tra SHA256, ch�
 
 ## Cài đặt từ gói phát hành
 
-Giải nén gói `qcp-v1.0.0-beta.3-linux-amd64-arm64.tar.gz` trên VPS rồi chạy:
+Giải nén gói `qcp-v1.0.0-beta.4-linux-amd64-arm64.tar.gz` trên VPS rồi chạy:
 
 ```sh
-cd qcp-v1.0.0-beta.3
+cd qcp-v1.0.0-beta.4
 ./install.sh --check
 sudo ./install.sh --install
 ```

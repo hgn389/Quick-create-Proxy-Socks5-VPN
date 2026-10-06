@@ -3,8 +3,25 @@ package main
 import (
 	"crypto/tls"
 	"net/http"
+	"net/http/httptest"
 	"testing"
 )
+
+func TestSecureUsesSameOriginReferrerPolicy(t *testing.T) {
+	p := &panel{}
+	handler := p.secure(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	r := httptest.NewRequest(http.MethodGet, "https://127.0.0.1:22689/login", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, r)
+	if w.Code != http.StatusNoContent {
+		t.Fatalf("unexpected status %d", w.Code)
+	}
+	if got := w.Header().Get("Referrer-Policy"); got != "same-origin" {
+		t.Fatalf("Referrer-Policy = %q, want same-origin", got)
+	}
+}
 
 func TestSameOrigin(t *testing.T) {
 	tests := []struct {
