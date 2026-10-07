@@ -3,7 +3,7 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 readonly APP_NAME="Quick Create Proxy SOCKS5 VPN"
-readonly APP_VERSION="1.0.0-beta.5"
+readonly APP_VERSION="1.0.0-beta.6"
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 readonly SCRIPT_DIR
 

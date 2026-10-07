@@ -1,4 +1,4 @@
-# Quick Create Proxy SOCKS5 VPN — v1.0.0-beta.5
+# Quick Create Proxy SOCKS5 VPN — v1.0.0-beta.6
 
 Bản beta chạy bằng Go + 3proxy + WireGuard trên Linux/systemd, không cần Docker, database server hay webserver riêng. Panel dùng HTTPS trên cổng TCP `22689`, không chiếm cổng 80/443 của website.
 
@@ -7,10 +7,10 @@ Bản beta chạy bằng Go + 3proxy + WireGuard trên Linux/systemd, không c�
 Đăng nhập VPS bằng SSH, sao chép nguyên lệnh sau và dán vào terminal:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/hgn389/Quick-create-Proxy-Socks5-VPN/v1.0.0-beta.5/install-online.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/hgn389/Quick-create-Proxy-Socks5-VPN/v1.0.0-beta.6/install-online.sh | sudo bash
 ```
 
-Lệnh này tải đúng GitHub Release `v1.0.0-beta.5`, kiểm tra SHA256, chọn binary `amd64` hoặc `arm64`, rồi hiển thị kế hoạch cài đặt để xác nhận. Nếu đang đăng nhập trực tiếp bằng `root` và máy không có `sudo`, dùng `| bash` ở cuối lệnh. Sau khi hoàn tất, terminal hiển thị URL webpanel cùng tài khoản ban đầu `admin` / `12345687`.
+Lệnh này tải đúng GitHub Release `v1.0.0-beta.6`, kiểm tra SHA256, chọn binary `amd64` hoặc `arm64`, rồi hiển thị kế hoạch cài đặt để xác nhận. Nếu đang đăng nhập trực tiếp bằng `root` và máy không có `sudo`, dùng `| bash` ở cuối lệnh. Sau khi hoàn tất, terminal hiển thị URL webpanel cùng tài khoản ban đầu `admin` / `12345687`.
 
 > Lệnh cài nhanh chỉ hoạt động sau khi tag và GitHub Release tương ứng đã được xuất bản. Trước thời điểm đó, dùng gói phát hành cục bộ theo phần cài đặt thủ công bên dưới.
 
@@ -18,6 +18,7 @@ Lệnh này tải đúng GitHub Release `v1.0.0-beta.5`, kiểm tra SHA256, ch�
 
 - Panel một tài khoản quản trị mặc định `admin` / `12345687`, buộc đổi mật khẩu ngay sau lần đăng nhập đầu tiên, giới hạn thử đăng nhập, phiên và CSRF. Bộ cài tạo chứng chỉ HTTPS riêng cho IP panel.
 - Nút tạo nhanh SOCKS5 hoặc HTTP proxy có `CONNECT` cho HTTPS: QCP tự chọn cổng, sinh user/mật khẩu, mở firewall trên VPS và trả ngay một dòng `IP:PORT:USER:PASSWORD`. Phần tùy chỉnh vẫn cho phép chọn tên, cổng và IPv4 CIDR nguồn.
+- Giao diện compact với card, form, bảng và nút nhỏ hơn; WireGuard và phần tạo tùy chỉnh được thu gọn để giảm thao tác cuộn trang.
 - Khởi tạo WireGuard, tạo peer iPhone, QR/cấu hình hiện một lần, bật/tắt/thu hồi peer, xem handshake và byte nhận/gửi hiện tại. Peer chỉ lưu khóa công khai. Có full tunnel và split tunnel chỉ tới mạng WireGuard nội bộ; full tunnel đưa IPv6 vào tunnel nhưng chưa có NAT/routing IPv6 ra Internet.
 - Cài/nâng cấp tại chỗ có bản sao của binary, unit và admin hash cũ; tự khôi phục các file đó nếu giai đoạn thay thế thất bại. Gỡ cài đặt giữ lại cấu hình và dữ liệu nhạy cảm trên VPS.
 - Footer có `Check Update`: tra cứu GitHub Release của dự án. Khi có bản mới, nút cập nhật tải gói, kiểm tra SHA256 do GitHub công bố, rồi chạy bộ cài trong một systemd unit riêng.
@@ -26,10 +27,10 @@ Lệnh này tải đúng GitHub Release `v1.0.0-beta.5`, kiểm tra SHA256, ch�
 
 ## Cài đặt từ gói phát hành
 
-Giải nén gói `qcp-v1.0.0-beta.5-linux-amd64-arm64.tar.gz` trên VPS rồi chạy:
+Giải nén gói `qcp-v1.0.0-beta.6-linux-amd64-arm64.tar.gz` trên VPS rồi chạy:
 
 ```sh
-cd qcp-v1.0.0-beta.5
+cd qcp-v1.0.0-beta.6
 ./install.sh --check
 sudo ./install.sh --install
 ```

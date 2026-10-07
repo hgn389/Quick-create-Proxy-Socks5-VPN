@@ -25,7 +25,7 @@ import (
 )
 
 const (
-	version              = "1.0.0-beta.5"
+	version              = "1.0.0-beta.6"
 	etcDir               = "/etc/qcp"
 	stateDir             = "/var/lib/qcp"
 	runDir               = "/run/qcp"
